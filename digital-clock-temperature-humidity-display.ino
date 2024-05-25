@@ -76,7 +76,7 @@ void setupProcess() {
   pinMode(backlightPin, OUTPUT);
   pinMode(PIR_PIN, INPUT);
 
-  Serial.begin(9600);
+  // Serial.begin(9600);
   lcd.begin(16, 2);
   lcd.createChar(0, degreeSymbol); // Derece sembolünü özel karakter olarak tanımla
   dht.begin();
@@ -180,10 +180,6 @@ void loop() {
 
   // Check for inactivity to enter sleep mode
   int activity = digitalRead(PIR_PIN); //Sensörden okuma yapıyoruz.
-  Serial.print("Aktivite: ");
-  Serial.print(activity);
-  Serial.print("   /   Zaman Farkı: ");
-  Serial.println(currentMillis - lastActivityTime);
   if (!isSleep && activity == HIGH) {
     lastActivityTime = currentMillis; // Reset activity time after waking up
   }
@@ -207,10 +203,6 @@ void updateClockDate(bool fullUpdate) {
 
   sprintf(dateBuffer, "%02d.%02d.%04d", myRTC.dayofmonth, myRTC.month, myRTC.year);
   sprintf(timeBuffer, "%02d:%02d:%02d", myRTC.hours, myRTC.minutes, myRTC.seconds);
-
-  Serial.print(dateBuffer);
-  Serial.print(" ");
-  Serial.println(timeBuffer);
 
   for (int i = 0; i < 10; i++) {
     if (fullUpdate || dateBuffer[i] != prevDateBuffer[i]) {
@@ -238,13 +230,6 @@ void updateTempHum(bool fullUpdate) {
 
   sprintf(tempBuffer, "%2d", temperature); // Derece sembolü olmadan sıcaklığı yazdırma
   sprintf(humBuffer, "%%%d", humidity); // "%" for humidity
-
-  Serial.print("Sıcaklık: ");
-  Serial.print(temperature);
-  Serial.print("°C");
-  Serial.print(" - ");
-  Serial.print("Nem: %");
-  Serial.println(humidity);
 
   for (int i = 0; i < 2; i++) {
     if (fullUpdate || tempBuffer[i] != prevTempBuffer[i]) {
