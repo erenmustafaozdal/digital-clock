@@ -50,6 +50,9 @@ unsigned long interval = 0; // in milliseconds
 unsigned long lastTempHumUpdate = 0;
 unsigned long lastClockUpdate = 0;
 
+// Button debounce time
+int debounceTime = 50;
+
 bool isBreak = false; // Track whether it's break or lesson time
 bool pomodoroActive = false; // Track whether Pomodoro is active
 
@@ -73,6 +76,11 @@ void setupProcess() {
   lcd.begin(16, 2);
   lcd.createChar(0, degreeSymbol); // Derece sembolünü özel karakter olarak tanımla
   dht.begin();
+  // Başlangıçta birkaç kez sensörden veri okuyarak güvenilir sonuç al
+  for (int i = 0; i < 3; i++) {
+    updateTempHum(true);
+    delay(100);
+  }
   displayClock();  // Display initial clock data
 }
 
@@ -87,7 +95,10 @@ void loop() {
   static unsigned long lastDebounceTime2 = 0;
   static bool lastButtonState1 = HIGH;
   static bool lastButtonState2 = HIGH;
+  static bool button1Pressed = false;
+  static bool button2Pressed = false;
 
+  unsigned long currentMillis = millis();
   static unsigned long button1PressTime = 0;
 
   bool reading1 = digitalRead(button1Pin);
@@ -99,15 +110,15 @@ void loop() {
   analogWrite(backlightPin, brightness);  // LCD'nin arka ışık parlaklığını ayarlar
 
   if (reading1 != lastButtonState1) {
-    lastDebounceTime1 = millis();
+    lastDebounceTime1 = currentMillis;
   }
-  if ((millis() - lastDebounceTime1) > 50) {
+  if ((currentMillis - lastDebounceTime1) > debounceTime) {
     if (reading1 == LOW) {
       if (button1PressTime == 0) {
-        button1PressTime = millis();
+        button1PressTime = currentMillis;
       }
     } else {
-      if (button1PressTime != 0 && (millis() - button1PressTime) > 1000) {
+      if (button1PressTime != 0 && (currentMillis - button1PressTime) > 1000) {
         // Long press detected for button 1
         if (mode == 1) {
           resetPomodoroDefaults();
@@ -118,11 +129,12 @@ void loop() {
   }
 
   if (reading2 != lastButtonState2) {
-    lastDebounceTime2 = millis();
+    lastDebounceTime2 = currentMillis;
   }
 
-  if ((millis() - lastDebounceTime1) > 50) {
-    if (reading1 == LOW) {
+  if ((currentMillis - lastDebounceTime1) > debounceTime) {
+    if (reading1 == LOW && !button1Pressed) {
+      button1Pressed = true;
       if (mode == 0) {
         mode = 1;
         settingMode = 0;
@@ -135,12 +147,15 @@ void loop() {
           lcd.clear();
         }
       }
+    } else if (reading1 == HIGH) {
+      button1Pressed = false;
     }
   }
   
 
-  if ((millis() - lastDebounceTime2) > 50) {
-    if (reading2 == LOW) {
+  if ((currentMillis - lastDebounceTime2) > debounceTime) {
+    if (reading2 == LOW && !button2Pressed) {
+      button2Pressed = true;
       if (mode == 1) {
         switch (settingMode) {
           case 0:
@@ -157,6 +172,8 @@ void loop() {
             break;
         }
       }
+    } else if (reading2 == HIGH) {
+      button2Pressed = false;
     }
   }
 
@@ -164,13 +181,13 @@ void loop() {
   lastButtonState2 = reading2;
 
   if (mode == 0) {
-    if (millis() - lastClockUpdate >= 1000) {
+    if (currentMillis - lastClockUpdate >= 1000) {
       updateClockDate(false);
-      lastClockUpdate = millis();
+      lastClockUpdate = currentMillis;
     }
-    if (millis() - lastTempHumUpdate >= 300000) {
+    if (currentMillis - lastTempHumUpdate >= 300000) {
       updateTempHum(false);
-      lastTempHumUpdate = millis();
+      lastTempHumUpdate = currentMillis;
     }
   } else {
     displaySettings();
@@ -180,20 +197,20 @@ void loop() {
     updatePomodoro();
   }
 
-  delay(500);
+  delay(100);
 
   // Check for inactivity to enter sleep mode
   int activity = digitalRead(PIR_PIN); //Sensörden okuma yapıyoruz.
   Serial.print("Aktivite: ");
   Serial.print(activity);
   Serial.print("   /   Zaman Farkı: ");
-  Serial.println(millis() - lastActivityTime);
+  Serial.println(currentMillis - lastActivityTime);
   if (!isSleep && activity == HIGH) {
-    lastActivityTime = millis(); // Reset activity time after waking up
+    lastActivityTime = currentMillis; // Reset activity time after waking up
   }
-  if (millis() - lastActivityTime > 60000) { // 1 minute of inactivity
+  if (currentMillis - lastActivityTime > 60000) { // 1 minute of inactivity
     enterSleep();
-    lastActivityTime = millis(); // Reset activity time after waking up
+    lastActivityTime = currentMillis; // Reset activity time after waking up
   }
 }
 
@@ -353,12 +370,6 @@ void resetPomodoroDefaults() {
 
 void wakeUp() {
   isSleep = false;
-   
-  // Disable external pin interrupt on wake up pin.
-  // detachInterrupt(digitalPinToInterrupt(PIR_PIN));
-
-  // Reinitialize components after waking up
-  // setupProcess();
 }
 
 void enterSleep() {
@@ -377,8 +388,4 @@ void enterSleep() {
   // The processor will continue here after waking up
   sleep_disable();
   detachInterrupt(digitalPinToInterrupt(PIR_PIN));
-  
-  // Enter power down state with ADC and BOD module disabled.
-  // Wake up when wake up pin is low.
-  // LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 }
