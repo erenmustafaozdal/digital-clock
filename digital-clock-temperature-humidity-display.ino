@@ -96,7 +96,6 @@ void loop() {
   // Read LDR value and adjust backlight brightness
   int ldrValue = analogRead(LDR_PIN);  // LDR sensöründen gelen değeri okur
   int brightness = map(ldrValue, 0, 300, 0, 75);  // LDR değerini 0-75 aralığına dönüştürür
-  brightness = constrain(brightness, 3, 75);  // Parlaklık değerini 10-75 aralığına sınırla
   analogWrite(backlightPin, brightness);  // LCD'nin arka ışık parlaklığını ayarlar
 
   if (reading1 != lastButtonState1) {
@@ -181,10 +180,14 @@ void loop() {
     updatePomodoro();
   }
 
-  delay(100);
+  delay(500);
 
   // Check for inactivity to enter sleep mode
   int activity = digitalRead(PIR_PIN); //Sensörden okuma yapıyoruz.
+  Serial.print("Aktivite: ");
+  Serial.print(activity);
+  Serial.print("   /   Zaman Farkı: ");
+  Serial.println(millis() - lastActivityTime);
   if (!isSleep && activity == HIGH) {
     lastActivityTime = millis(); // Reset activity time after waking up
   }
