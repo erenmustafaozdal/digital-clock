@@ -3,6 +3,7 @@
 #include <DHT.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
+#include <Bounce2.h>  // Bounce2 kütüphanesini dahil ediyoruz
 
 #define DHTPIN 8       // DHT11 sensörünün bağlı olduğu pin
 #define DHTTYPE DHT11  // DHT11 kullanıyoruz
@@ -50,9 +51,6 @@ unsigned long interval = 0; // in milliseconds
 unsigned long lastTempHumUpdate = 0;
 unsigned long lastClockUpdate = 0;
 
-// Button debounce time
-int debounceTime = 50;
-
 bool isBreak = false; // Track whether it's break or lesson time
 bool pomodoroActive = false; // Track whether Pomodoro is active
 
@@ -64,6 +62,12 @@ char prevHumBuffer[4];
 bool isSleep = false; // Uyku modunda mı
 volatile bool motionDetected = false;
 static unsigned long lastActivityTime = millis();
+
+unsigned long button1PressTime = 0; // Buton 1 basılı kalma süresi
+
+// Bounce kütüphanesi için buton nesneleri
+Bounce button1 = Bounce(); 
+Bounce button2 = Bounce();
 
 void setupProcess() {
   pinMode(button1Pin, INPUT_PULLUP);
@@ -82,6 +86,12 @@ void setupProcess() {
     delay(100);
   }
   displayClock();  // Display initial clock data
+
+  // Bounce kütüphanesi için butonları başlat
+  button1.attach(button1Pin);
+  button1.interval(50); // Debounce süresi 50 ms
+  button2.attach(button2Pin);
+  button2.interval(50); // Debounce süresi 50 ms
 }
 
 void setup() {
@@ -91,94 +101,65 @@ void setup() {
 void loop() {
   interrupts();    // enable interrupts for Due and Nano V3
 
-  static unsigned long lastDebounceTime1 = 0;
-  static unsigned long lastDebounceTime2 = 0;
-  static bool lastButtonState1 = HIGH;
-  static bool lastButtonState2 = HIGH;
-  static bool button1Pressed = false;
-  static bool button2Pressed = false;
-
   unsigned long currentMillis = millis();
-  static unsigned long button1PressTime = 0;
 
-  bool reading1 = digitalRead(button1Pin);
-  bool reading2 = digitalRead(button2Pin);
+  // Bounce kütüphanesi ile butonların durumunu güncelle
+  button1.update();
+  button2.update();
 
   // Read LDR value and adjust backlight brightness
   int ldrValue = analogRead(LDR_PIN);  // LDR sensöründen gelen değeri okur
   int brightness = map(ldrValue, 0, 300, 0, 75);  // LDR değerini 0-75 aralığına dönüştürür
   analogWrite(backlightPin, brightness);  // LCD'nin arka ışık parlaklığını ayarlar
 
-  if (reading1 != lastButtonState1) {
-    lastDebounceTime1 = currentMillis;
-  }
-  if ((currentMillis - lastDebounceTime1) > debounceTime) {
-    if (reading1 == LOW) {
-      if (button1PressTime == 0) {
-        button1PressTime = currentMillis;
-      }
-    } else {
-      if (button1PressTime != 0 && (currentMillis - button1PressTime) > 1000) {
-        // Long press detected for button 1
-        if (mode == 1) {
-          resetPomodoroDefaults();
-        }
-      }
-      button1PressTime = 0;
-    }
-  }
-
-  if (reading2 != lastButtonState2) {
-    lastDebounceTime2 = currentMillis;
-  }
-
-  if ((currentMillis - lastDebounceTime1) > debounceTime) {
-    if (reading1 == LOW && !button1Pressed) {
-      button1Pressed = true;
-      if (mode == 0) {
-        mode = 1;
-        settingMode = 0;
-        lcd.clear();
-      } else {
-        settingMode = (settingMode + 1) % 3;
-        if (settingMode == 0) {
-          mode = 0;
-          startPomodoro();
-          lcd.clear();
-        }
-      }
-    } else if (reading1 == HIGH) {
-      button1Pressed = false;
-    }
-  }
-  
-
-  if ((currentMillis - lastDebounceTime2) > debounceTime) {
-    if (reading2 == LOW && !button2Pressed) {
-      button2Pressed = true;
+  // Button 1 press logic
+  if (button1.read() == LOW) {
+    if (button1PressTime == 0) {
+      button1PressTime = currentMillis;
+    } else if (currentMillis - button1PressTime > 1000) {
+      // Long press detected for button 1
       if (mode == 1) {
-        switch (settingMode) {
-          case 0:
-            lessonTime++;
-            if (lessonTime > 40) lessonTime = 1;
-            break;
-          case 1:
-            breakTime++;
-            if (breakTime > 20) breakTime = 1;
-            break;
-          case 2:
-            lessonCount++;
-            if (lessonCount > 3) lessonCount = 1;
-            break;
-        }
+        resetPomodoroDefaults();
       }
-    } else if (reading2 == HIGH) {
-      button2Pressed = false;
+      button1PressTime = 0; // Prevent multiple triggers
+    }
+  } else {
+    button1PressTime = 0;
+  }
+
+  if (button1.fell()) {
+    if (mode == 0) {
+      mode = 1;
+      settingMode = 0;
+      lcd.clear();
+    } else {
+      settingMode = (settingMode + 1) % 3;
+      if (settingMode == 0) {
+        mode = 0;
+        startPomodoro();
+        lcd.clear();
+      }
     }
   }
 
-  lastButtonState1 = reading1;
-  lastButtonState2 = reading2;
+  if (button2.fell()) {
+    if (mode == 1) {
+      switch (settingMode) {
+        case 0:
+          lessonTime++;
+          if (lessonTime > 40) lessonTime = 1;
+          break;
+        case 1:
+          breakTime++;
+          if (breakTime > 20) breakTime = 1;
+          break;
+        case 2:
+          lessonCount++;
+          if (lessonCount > 3) lessonCount = 1;
+          break;
+      }
+    }
+  }
 
   if (mode == 0) {
     if (currentMillis - lastClockUpdate >= 1000) {
