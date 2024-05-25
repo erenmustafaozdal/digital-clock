@@ -69,6 +69,55 @@ unsigned long button1PressTime = 0; // Buton 1 basılı kalma süresi
 Bounce button1 = Bounce(); 
 Bounce button2 = Bounce();
 
+#define NOTE_C4  262
+#define NOTE_D4  294
+#define NOTE_E4  330
+#define NOTE_F4  349
+#define NOTE_G4  392
+#define NOTE_A4  440
+#define NOTE_B4  494
+#define NOTE_C5  523
+
+int lessonEndMelody[] = {
+  NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_A4, NOTE_A4, NOTE_G4,
+  NOTE_F4, NOTE_F4, NOTE_E4, NOTE_E4, NOTE_D4, NOTE_D4, NOTE_C4
+};
+
+int lessonEndNoteDurations[] = {
+  4, 4, 4, 4, 4, 4, 2,
+  4, 4, 4, 4, 4, 4, 2
+};
+
+int breakEndMelody[] = {
+  NOTE_G4, NOTE_A4, NOTE_G4, NOTE_E4, NOTE_F4, NOTE_E4, NOTE_D4
+};
+
+int breakEndNoteDurations[] = {
+  4, 4, 4, 4, 4, 4, 2
+};
+
+void playLessonEndMelody() {
+  for (int thisNote = 0; thisNote < sizeof(lessonEndMelody) / sizeof(lessonEndMelody[0]); thisNote++) {
+    int noteDuration = 1000 / lessonEndNoteDurations[thisNote];
+    tone(buzzerPin, lessonEndMelody[thisNote], noteDuration);
+
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(buzzerPin);
+  }
+}
+
+void playBreakEndMelody() {
+  for (int thisNote = 0; thisNote < sizeof(breakEndMelody) / sizeof(breakEndMelody[0]); thisNote++) {
+    int noteDuration = 1000 / breakEndNoteDurations[thisNote];
+    tone(buzzerPin, breakEndMelody[thisNote], noteDuration);
+
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(buzzerPin);
+  }
+}
+
 void setupProcess() {
   pinMode(button1Pin, INPUT_PULLUP);
   pinMode(button2Pin, INPUT_PULLUP);
@@ -327,11 +376,8 @@ void updatePomodoro() {
   unsigned long elapsedTime = currentMillis - previousMillis;
 
   if (elapsedTime >= interval) {
-    digitalWrite(buzzerPin, HIGH);
-    delay(1000);
-    digitalWrite(buzzerPin, LOW);
-
     if (isBreak) {
+      playBreakEndMelody(); // Teneffüs sonu melodisi çal
       isBreak = false;
       currentLesson++;
       if (currentLesson >= lessonCount) {
@@ -340,6 +386,7 @@ void updatePomodoro() {
       }
       interval = lessonTime * 60000; // Yeni ders süresi
     } else {
+      playLessonEndMelody(); // Ders sonu melodisi çal
       isBreak = true;
       interval = breakTime * 60000; // Yeni teneffüs süresi
     }
