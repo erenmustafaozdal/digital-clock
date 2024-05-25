@@ -178,8 +178,6 @@ void loop() {
     updatePomodoro();
   }
 
-  delay(100);
-
   // Check for inactivity to enter sleep mode
   int activity = digitalRead(PIR_PIN); //Sensörden okuma yapıyoruz.
   Serial.print("Aktivite: ");
