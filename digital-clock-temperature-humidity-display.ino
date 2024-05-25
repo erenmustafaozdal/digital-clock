@@ -254,24 +254,62 @@ void updateTempHum(bool fullUpdate) {
 }
 
 void displaySettings() {
-  lcd.clear();
+  static int prevLessonTime = -1;
+  static int prevBreakTime = -1;
+  static int prevLessonCount = -1;
+  static int prevSettingMode = -1;
+
+  if (settingMode != prevSettingMode) {
+    lcd.clear();
+    prevSettingMode = settingMode;
+
+    // Display the appropriate static text based on settingMode
+    switch (settingMode) {
+      case 0:
+        lcd.setCursor(0, 0);
+        lcd.print("Ders suresi:");
+        break;
+      case 1:
+        lcd.setCursor(0, 0);
+        lcd.print("Teneffus suresi:");
+        break;
+      case 2:
+        lcd.setCursor(0, 0);
+        lcd.print("Ders sayisi:");
+        break;
+    }
+  }
+
+  // Display dynamic values
   switch (settingMode) {
     case 0:
-      lcd.print("Ders suresi:");
-      lcd.setCursor(0, 1);
-      lcd.print(lessonTime);
-      lcd.print(" dakika");
+      if (lessonTime != prevLessonTime) {
+        lcd.setCursor(0, 1);
+        lcd.print("                "); // 16 boşluk, LCD'nin ikinci satırını tamamen temizler
+        lcd.setCursor(0, 1);
+        lcd.print(lessonTime);
+        lcd.print(" dakika");
+        prevLessonTime = lessonTime;
+      }
       break;
     case 1:
-      lcd.print("Teneffus suresi:");
-      lcd.setCursor(0, 1);
-      lcd.print(breakTime);
-      lcd.print(" dakika");
+      if (breakTime != prevBreakTime) {
+        lcd.setCursor(0, 1);
+        lcd.print("                "); // 16 boşluk, LCD'nin ikinci satırını tamamen temizler
+        lcd.setCursor(0, 1);
+        lcd.print(breakTime);
+        lcd.print(" dakika");
+        prevBreakTime = breakTime;
+      }
       break;
     case 2:
-      lcd.print("Ders sayisi:");
-      lcd.setCursor(0, 1);
-      lcd.print(lessonCount);
+      if (lessonCount != prevLessonCount) {
+        lcd.setCursor(0, 1);
+        lcd.print("                "); // 16 boşluk, LCD'nin ikinci satırını tamamen temizler
+        lcd.setCursor(0, 1);
+        lcd.print(lessonCount);
+        prevLessonCount = lessonCount;
+      }
       break;
   }
 }
