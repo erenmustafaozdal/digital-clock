@@ -36,11 +36,11 @@ byte degreeSymbol[8] = {
 };
 
 // Pomodoro varsayılan değerleri
-const int defaultLessonTime = 3;
+const int defaultLessonTime = 1;
 const int defaultBreakTime = 1;
 const int defaultLessonCount = 2;
 
-int mode = 0; // 0: clock, 1: pomodoro
+int mode = 0; // 0: clock, 1: settings, 2: pomodoro
 int settingMode = 0; // 0: lesson time, 1: break time, 2: lesson count
 int lessonTime = defaultLessonTime; // in minutes
 int breakTime = defaultBreakTime; // in minutes
@@ -53,6 +53,9 @@ unsigned long lastClockUpdate = 0;
 
 bool isBreak = false; // Track whether it's break or lesson time
 bool pomodoroActive = false; // Track whether Pomodoro is active
+int prevMinutes = -1;
+int prevSeconds = -1;
+bool prevIsBreak = true;
 
 char prevDateBuffer[11];
 char prevTimeBuffer[6];
@@ -125,7 +128,7 @@ void setupProcess() {
   pinMode(backlightPin, OUTPUT);
   pinMode(PIR_PIN, INPUT);
 
-  // Serial.begin(9600);
+  Serial.begin(9600);
   lcd.begin(16, 2);
   lcd.createChar(0, degreeSymbol); // Derece sembolünü özel karakter olarak tanımla
   dht.begin();
@@ -167,7 +170,7 @@ void loop() {
       button1PressTime = currentMillis;
     } else if (currentMillis - button1PressTime > 1000) {
       // Long press detected for button 1
-      if (mode == 1) {
+      if (mode == 1 || mode == 2) {
         resetPomodoroDefaults();
       }
       button1PressTime = 0; // Prevent multiple triggers
@@ -184,7 +187,7 @@ void loop() {
     } else {
       settingMode = (settingMode + 1) % 3;
       if (settingMode == 0) {
-        mode = 0;
+        mode = 2;
         startPomodoro();
         lcd.clear();
       }
@@ -210,6 +213,8 @@ void loop() {
     }
   }
 
+  Serial.print("Mod: ");
+  Serial.println(mode);
   if (mode == 0) {
     if (currentMillis - lastClockUpdate >= 1000) {
       updateClockDate(false);
@@ -219,11 +224,9 @@ void loop() {
       updateTempHum(false);
       lastTempHumUpdate = currentMillis;
     }
-  } else {
+  } else if (mode == 1) {
     displaySettings();
-  }
-
-  if (pomodoroActive) {
+  } else {
     updatePomodoro();
   }
 
@@ -332,6 +335,9 @@ void displaySettings() {
   // Display dynamic values
   switch (settingMode) {
     case 0:
+      prevBreakTime = -1;
+      prevLessonCount = -1;
+
       if (lessonTime != prevLessonTime) {
         lcd.setCursor(0, 1);
         lcd.print("                "); // 16 boşluk, LCD'nin ikinci satırını tamamen temizler
@@ -342,6 +348,9 @@ void displaySettings() {
       }
       break;
     case 1:
+      prevLessonTime = -1;
+      prevLessonCount = -1;
+
       if (breakTime != prevBreakTime) {
         lcd.setCursor(0, 1);
         lcd.print("                "); // 16 boşluk, LCD'nin ikinci satırını tamamen temizler
@@ -352,6 +361,9 @@ void displaySettings() {
       }
       break;
     case 2:
+      prevLessonTime = -1;
+      prevBreakTime = -1;
+      
       if (lessonCount != prevLessonCount) {
         lcd.setCursor(0, 1);
         lcd.print("                "); // 16 boşluk, LCD'nin ikinci satırını tamamen temizler
@@ -382,6 +394,8 @@ void updatePomodoro() {
       currentLesson++;
       if (currentLesson >= lessonCount) {
         pomodoroActive = false;
+        displayClock();
+        mode = 0;
         return;
       }
       interval = lessonTime * 60000; // Yeni ders süresi
@@ -398,16 +412,16 @@ void updatePomodoro() {
   int minutes = remainingTime / 60000;
   int seconds = (remainingTime % 60000) / 1000;
 
-  static int prevMinutes = -1;
-  static int prevSeconds = -1;
-
   // Only update the mode line if it has changed
-  if (prevMinutes == -1) {
+  if (isBreak != prevIsBreak) {
     lcd.setCursor(0, 0);
-    lcd.print(isBreak ? "Teneffus:" : "Ders:");
+    lcd.print(isBreak ? "Teneffus:" : String(currentLesson + 1) + ". Ders:");
+    prevIsBreak = isBreak;
   }
 
   // Only update the minutes if they have changed
+  Serial.print("prevMinutes: ");
+  Serial.println(prevMinutes);
   if (minutes != prevMinutes) {
     lcd.setCursor(0, 1);
     if (minutes < 10) lcd.print('0');
@@ -431,6 +445,9 @@ void resetPomodoroDefaults() {
   lessonCount = defaultLessonCount;
   pomodoroActive = false;
   mode = 0;
+  prevMinutes = -1;
+  prevSeconds = -1;
+  prevIsBreak = true;
   displayClock();
 }
 
