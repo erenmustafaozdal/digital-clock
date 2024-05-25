@@ -351,14 +351,31 @@ void updatePomodoro() {
   int minutes = remainingTime / 60000;
   int seconds = (remainingTime % 60000) / 1000;
 
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(isBreak ? "Teneffus:" : "Ders:");
-  lcd.setCursor(0, 1);
-  lcd.print(minutes);
-  lcd.print(":");
-  lcd.print(seconds < 10 ? "0" : "");
+  static int prevMinutes = -1;
+  static int prevSeconds = -1;
+
+  // Only update the mode line if it has changed
+  if (prevMinutes == -1) {
+    lcd.setCursor(0, 0);
+    lcd.print(isBreak ? "Teneffus:" : "Ders:");
+  }
+
+  // Only update the minutes if they have changed
+  if (minutes != prevMinutes) {
+    lcd.setCursor(0, 1);
+    if (minutes < 10) lcd.print('0');
+    lcd.print(minutes);
+    prevMinutes = minutes;
+  }
+
+  // Always update the colon and seconds since they change every second
+  lcd.setCursor(2, 1); // Position for the colon
+  lcd.print(':');
+  lcd.setCursor(3, 1); // Position for the seconds
+  if (seconds < 10) lcd.print('0');
   lcd.print(seconds);
+
+  prevSeconds = seconds;
 }
 
 void resetPomodoroDefaults() {
