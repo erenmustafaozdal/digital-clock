@@ -3,8 +3,7 @@
 #include <Arduino.h>
 
 Pomodoro::Pomodoro(int lessonTime, int breakTime, int lessonCount)
-    : settingMode(0), // 0: lesson time, 1: break time, 2: lesson count
-      lessonTime(lessonTime),
+    : lessonTime(lessonTime),
       breakTime(breakTime),
       lessonCount(lessonCount),
       currentLesson(0),
@@ -13,34 +12,6 @@ Pomodoro::Pomodoro(int lessonTime, int breakTime, int lessonCount)
       isBreak(false),
       active(false)
 {
-}
-
-void Pomodoro::settings(Display display)
-{
-    display.clear();
-    char *buffer; // buffer değişkenini switch bloğunun dışına tanımla
-
-    switch (settingMode)
-    {
-    case 0:
-        display.print(0, 0, "Odaklanma:");
-        buffer = this->timeToStr(lessonTime);
-        display.print(0, 1, buffer);
-        display.print(strlen(buffer), 1, " dakika");
-        break;
-    case 1:
-        display.print(0, 0, "Mola:");
-        buffer = this->timeToStr(breakTime);
-        display.print(0, 1, buffer);
-        display.print(strlen(buffer), 1, " dakika");
-        break;
-    case 2:
-        buffer = this->timeToStr(lessonCount);
-        display.print(0, 0, buffer);
-        display.print(strlen(buffer), 0, " defa");
-        display.print(0, 1, "mola olacak.");
-        break;
-    }
 }
 
 char *Pomodoro::timeToStr(int time)

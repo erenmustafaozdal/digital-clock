@@ -6,7 +6,9 @@ class Pomodoro
 {
 public:
     Pomodoro(int lessonTime, int breakTime, int lessonCount);
-    int settingMode;
+    int lessonTime;
+    int breakTime;
+    int lessonCount;
     void settings(Display display);
     char *timeToStr(int time);
     void start();
@@ -17,9 +19,6 @@ public:
     void resetDefaults();
 
 private:
-    int lessonTime;
-    int breakTime;
-    int lessonCount;
     int currentLesson;
     unsigned long previousMillis;
     unsigned long interval;
