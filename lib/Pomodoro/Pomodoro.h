@@ -1,12 +1,16 @@
 #ifndef POMODORO_H
 #define POMODORO_H
 
+#include "Display.h"
 class Pomodoro
 {
 public:
     Pomodoro(int lessonTime, int breakTime, int lessonCount);
+    int settingMode;
+    void settings(Display display);
+    char *timeToStr(int time);
     void start();
-    void update();
+    void update(Display display);
     bool isBreakTime();
     int getMinutesRemaining();
     int getSecondsRemaining();
