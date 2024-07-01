@@ -10,14 +10,25 @@ void Sensors::initialize()
     pinMode(_ldrPin, INPUT);
 }
 
-float Sensors::readTemperature()
+int Sensors::readTemperature()
 {
-    return _dht.readTemperature();
+    int temperature = _dht.readTemperature();
+
+    Serial.print("Sıcaklık alındı: ");
+    Serial.print(temperature);
+    Serial.println("°C");
+
+    return temperature;
 }
 
-float Sensors::readHumidity()
+int Sensors::readHumidity()
 {
-    return _dht.readHumidity();
+    int humidity = _dht.readTemperature();
+
+    Serial.print("Nem alındı: %");
+    Serial.println(humidity);
+
+    return humidity;
 }
 
 int Sensors::readLDR()

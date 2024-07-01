@@ -8,8 +8,8 @@ class Sensors
 public:
     Sensors(int dhtPin, int dhtType, int ldrPin);
     void initialize();
-    float readTemperature();
-    float readHumidity();
+    int readTemperature();
+    int readHumidity();
     int readLDR();
 
 private:
