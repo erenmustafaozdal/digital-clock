@@ -6,13 +6,16 @@
 
 // Function prototypes
 void displayLCD();
+void displaySettings();
 void updateClockDate();
 void updateTempHum();
+void handleButtons();
+void resetToDefaults();
 
 // Pin definitions
 #define DHTPIN 8      // DHT11 sensörünün bağlı olduğu pin
 #define DHTTYPE DHT11 // DHT11 kullanıyoruz
-#define LDR_PIN A3    // LDR sensörünün bağlı olduğu analog pin
+#define LDR_PIN A0    // LDR sensörünün bağlı olduğu analog pin
 #define CLK_PIN 11
 #define DAT_PIN 12
 #define RST_PIN 13
@@ -23,15 +26,16 @@ void updateTempHum();
 #define D6 6
 #define D7 7
 #define BACKLIGHT_PIN 9 // PWM pin for LCD backlight control
-#define BUTTON1_PIN A0  // Analog pin A0 buton 1 olarak kullanılıyor
-#define BUTTON2_PIN A1  // Analog pin A1 buton 2 olarak kullanılıyor
+#define BUTTON1_PIN A2  // Analog pin A2 buton 1 olarak kullanılıyor
+#define BUTTON2_PIN A3  // Analog pin A3 buton 2 olarak kullanılıyor
 
 // Pomodoro settings
 const int defaultLessonTime = 25;
 const int defaultBreakTime = 5;
 const int defaultLessonCount = 4;
 
-int mode = 0; // 0: clock, 1: pomodoro
+int mode = 0; // 0: clock, 1: settings, 2: pomodoro
+int settingStep = 0;
 
 // Instances of classes
 Clock clock(CLK_PIN, DAT_PIN, RST_PIN);
@@ -52,13 +56,7 @@ void setup()
 
 void loop()
 {
-  static unsigned long lastDebounceTime1 = 0;
-  static unsigned long lastDebounceTime2 = 0;
-  static bool lastButtonState1 = HIGH;
-  static bool lastButtonState2 = HIGH;
-
-  bool reading1 = digitalRead(BUTTON1_PIN);
-  bool reading2 = digitalRead(BUTTON2_PIN);
+  handleButtons();
 
   int ldrValue = sensors.readLDR();
 
@@ -84,18 +82,139 @@ void loop()
       lastTempHumUpdate = millis();
     }
   }
-  else
+  else if (mode == 1)
   {
     Serial.println("Settings ekranı görünmesi lazım.");
-    pomodoro.settings(display);
+    displaySettings();
+  }
+  else if (mode == 2)
+  {
+    pomodoro.update(display);
   }
 
-  // Update Pomodoro timer
-  pomodoro.update(display);
-
-  Serial.print("Mode: ");
-  Serial.println(mode);
   delay(100);
+}
+
+void handleButtons()
+{
+  static unsigned long lastDebounceTime1 = 0;
+  static unsigned long lastDebounceTime2 = 0;
+  static bool lastButtonState1 = HIGH;
+  static bool lastButtonState2 = HIGH;
+
+  bool reading1 = digitalRead(BUTTON1_PIN);
+  bool reading2 = digitalRead(BUTTON2_PIN);
+
+  if ((millis() - lastDebounceTime1) > 50)
+  {
+    if (reading1 == LOW && lastButtonState1 == HIGH)
+    {
+      lastDebounceTime1 = millis();
+      Serial.println("1. butona basıldı.");
+      if (mode == 0)
+      {
+        mode = 1; // Switch to settings mode
+        settingStep = 0;
+      }
+      else if (mode == 1)
+      {
+        settingStep++;
+        if (settingStep > 2)
+        {
+          mode = 2; // Start Pomodoro
+          pomodoro.start();
+        }
+      }
+    }
+  }
+
+  if ((millis() - lastDebounceTime2) > 50)
+  {
+    if (reading2 == LOW && lastButtonState2 == HIGH)
+    {
+      lastDebounceTime2 = millis();
+      Serial.println("2. butona basıldı.");
+      if (mode == 1)
+      {
+        if (settingStep == 0)
+        {
+          pomodoro.lessonTime++;
+          if (pomodoro.lessonTime > 40)
+            pomodoro.lessonTime = 1;
+        }
+        else if (settingStep == 1)
+        {
+          pomodoro.breakTime++;
+          if (pomodoro.breakTime > 20)
+            pomodoro.breakTime = 1;
+        }
+        else if (settingStep == 2)
+        {
+          pomodoro.lessonCount++;
+          if (pomodoro.lessonCount > 5)
+            pomodoro.lessonCount = 1;
+        }
+      }
+    }
+  }
+
+  unsigned long button1PressTime = 0;
+  const unsigned long longPressDuration = 3000; // 3 saniye
+
+  if (reading1 == LOW && lastButtonState1 == HIGH)
+  {
+    button1PressTime = millis();
+  }
+
+  if (reading1 == HIGH && lastButtonState1 == LOW)
+  {
+    if (button1PressTime != 0 && millis() - button1PressTime >= longPressDuration)
+    {
+      if (mode != 0)
+      {
+        Serial.println("Resetleme işlemi.");
+        resetToDefaults();
+      }
+    }
+    button1PressTime = 0;
+  }
+
+  lastButtonState1 = reading1;
+  lastButtonState2 = reading2;
+}
+
+void displaySettings()
+{
+  display.clear();
+  char buffer[16];
+
+  if (settingStep == 0)
+  {
+    display.print(0, 0, "Odaklanma:");
+    sprintf(buffer, "%d dakika", pomodoro.lessonTime);
+    display.print(0, 1, buffer);
+  }
+  else if (settingStep == 1)
+  {
+    display.print(0, 0, "Mola:");
+    sprintf(buffer, "%d dakika", pomodoro.breakTime);
+    display.print(0, 1, buffer);
+  }
+  else if (settingStep == 2)
+  {
+    sprintf(buffer, "%d defa", pomodoro.lessonCount);
+    display.print(0, 0, buffer);
+    display.print(0, 1, "mola olacak.");
+  }
+}
+
+void resetToDefaults()
+{
+  pomodoro.lessonTime = defaultLessonTime;
+  pomodoro.breakTime = defaultBreakTime;
+  pomodoro.lessonCount = defaultLessonCount;
+  mode = 0;
+  displayLCD();
 }
 
 void displayLCD()
