@@ -28,6 +28,24 @@ void Display::print(int col, int row, const char *message)
     lcd.print(message);
 }
 
+void Display::print(int col, int row, const String &message)
+{
+    lcd.setCursor(col, row);
+    lcd.print(message);
+}
+
+void Display::print(int col, int row, int message)
+{
+    lcd.setCursor(col, row);
+    lcd.print(message);
+}
+
+void Display::print(int col, int row, float message)
+{
+    lcd.setCursor(col, row);
+    lcd.print(message);
+}
+
 void Display::temp(int col, int row, const char *message)
 {
     lcd.setCursor(col, row);

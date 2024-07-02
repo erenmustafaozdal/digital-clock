@@ -84,7 +84,6 @@ void loop()
   }
   else if (mode == 1)
   {
-    Serial.println("Settings ekranı görünmesi lazım.");
     displaySettings();
   }
   else if (mode == 2)
@@ -186,24 +185,23 @@ void handleButtons()
 void displaySettings()
 {
   display.clear();
-  char buffer[16];
 
   if (settingStep == 0)
   {
     display.print(0, 0, "Odaklanma:");
-    sprintf(buffer, "%d dakika", pomodoro.lessonTime);
-    display.print(0, 1, buffer);
+    display.print(0, 1, pomodoro.lessonTime);
+    display.print(2, 1, " dakika");
   }
   else if (settingStep == 1)
   {
     display.print(0, 0, "Mola:");
-    sprintf(buffer, "%d dakika", pomodoro.breakTime);
-    display.print(0, 1, buffer);
+    display.print(0, 1, pomodoro.breakTime);
+    display.print(2, 1, " dakika");
   }
   else if (settingStep == 2)
   {
-    sprintf(buffer, "%d defa", pomodoro.lessonCount);
-    display.print(0, 0, buffer);
+    display.print(0, 0, pomodoro.lessonCount);
+    display.print(1, 0, " defa");
     display.print(0, 1, "mola olacak.");
   }
 }

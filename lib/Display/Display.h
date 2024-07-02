@@ -9,6 +9,9 @@ public:
     Display(int rs, int en, int d4, int d5, int d6, int d7, int backlightPin);
     void initialize();
     void print(int col, int row, const char *message);
+    void print(int col, int row, const String &message);
+    void print(int col, int row, int message);
+    void print(int col, int row, float message);
     void clear();
     void temp(int col, int row, const char *message);
 
